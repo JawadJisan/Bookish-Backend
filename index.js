@@ -1,10 +1,10 @@
-require('dotenv').config();
-const express = require('express');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+require("dotenv").config();
+const express = require("express");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 3000;
 
-const cors = require('cors');
+const cors = require("cors");
 
 app.use(cors());
 app.use(express.json());
@@ -17,19 +17,19 @@ const client = new MongoClient(process.env.MONGODB_URI, {
 
 const run = async () => {
   try {
-    const db = client.db('BookVault');
-    const bookCollection = db.collection('books');
-    const wishlistCollection = db.collection('wishlists');
-    const readlistCollection = db.collection('readlists');
+    const db = client.db("BookVault");
+    const bookCollection = db.collection("books");
+    const wishlistCollection = db.collection("wishlists");
+    const readlistCollection = db.collection("readlists");
 
-    app.get('/books', async (req, res) => {
+    app.get("/books", async (req, res) => {
       const cursor = bookCollection.find({}).sort({ publicationDate: -1 });
       const book = await cursor.toArray();
 
       res.send({ status: true, data: book });
     });
 
-    app.post('/book', async (req, res) => {
+    app.post("/book", async (req, res) => {
       const book = req.body;
 
       const result = await bookCollection.insertOne(book);
@@ -37,27 +37,30 @@ const run = async () => {
       res.send(result);
     });
 
-    app.get('/book/:id', async (req, res) => {
+    app.get("/book/:id", async (req, res) => {
       const id = req.params.id;
       const result = await bookCollection.findOne({ _id: ObjectId(id) });
       res.send(result);
     });
 
-    app.patch('/book/:id', async (req, res) => {
+    app.patch("/book/:id", async (req, res) => {
       const id = req.params.id;
-      const updatedData = req.body
-      const result = await bookCollection.findOneAndUpdate({ _id: ObjectId(id) }, { $set: updatedData });
+      const updatedData = req.body;
+      const result = await bookCollection.findOneAndUpdate(
+        { _id: ObjectId(id) },
+        { $set: updatedData }
+      );
       res.send(result);
     });
 
-    app.delete('/book/:id', async (req, res) => {
+    app.delete("/book/:id", async (req, res) => {
       const id = req.params.id;
 
       const result = await bookCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
     });
 
-    app.post('/review/:id', async (req, res) => {
+    app.post("/review/:id", async (req, res) => {
       const bookId = req.params.id;
       const review = req.body;
 
@@ -66,16 +69,15 @@ const run = async () => {
         { $push: { reviews: review } }
       );
 
-
       if (result.modifiedCount !== 1) {
-        res.json({ error: 'Book not found or review not added' });
+        res.json({ error: "Book not found or review not added" });
         return;
       }
 
-      res.json({ message: 'Review added successfully' });
+      res.json({ message: "Review added successfully" });
     });
 
-    app.get('/review/:id', async (req, res) => {
+    app.get("/review/:id", async (req, res) => {
       const bookId = req.params.id;
 
       const result = await bookCollection.findOne(
@@ -86,14 +88,14 @@ const run = async () => {
       if (result) {
         res.json(result);
       } else {
-        res.status(404).json({ error: 'Book not found' });
+        res.status(404).json({ error: "Book not found" });
       }
     });
 
-    app.patch('/review/:id/user/:email', async (req, res) => {
+    app.patch("/review/:id/user/:email", async (req, res) => {
       const bookId = req.params.id;
-      const userEmail = req.params.email
-      const updatedReview = req.body.review
+      const userEmail = req.params.email;
+      const updatedReview = req.body.review;
 
       const result = await bookCollection.findOneAndUpdate(
         { _id: ObjectId(bookId), "reviews.userEmail": userEmail },
@@ -104,12 +106,12 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
+      res.status(404).json({ error: "Book not found" });
     });
 
-    app.delete('/review/:id/user/:email', async (req, res) => {
+    app.delete("/review/:id/user/:email", async (req, res) => {
       const bookId = req.params.id;
-      const userEmail = req.params.email
+      const userEmail = req.params.email;
 
       const result = await bookCollection.findOneAndUpdate(
         { _id: ObjectId(bookId) },
@@ -120,24 +122,29 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
+      res.status(404).json({ error: "Book not found" });
     });
 
-    app.post('/wishlist', async (req, res) => {
+    app.post("/wishlist", async (req, res) => {
       const { userEmail, book } = req.body;
-      const payload = { userEmail, books: [book] }
+      const payload = { userEmail, books: [book] };
 
-      let result
-      const exist = await wishlistCollection.findOne({ userEmail })
+      let result;
+      const exist = await wishlistCollection.findOne({ userEmail });
       if (exist)
-        result = await wishlistCollection.findOneAndUpdate({ userEmail }, { $push: { books: book } })
-      else
-        result = await wishlistCollection.insertOne(payload);
+        result = await wishlistCollection.findOneAndUpdate(
+          { userEmail },
+          { $push: { books: book } }
+        );
+      else result = await wishlistCollection.insertOne(payload);
 
-      res.json({ message: 'Wishlist added successfully', result: result.value });
+      res.json({
+        message: "Wishlist added successfully",
+        result: result.value,
+      });
     });
 
-    app.get('/wishlist/:email', async (req, res) => {
+    app.get("/wishlist/:email", async (req, res) => {
       const userEmail = req.params.email;
       const result = await wishlistCollection.findOne({ userEmail });
 
@@ -145,15 +152,14 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
-
+      res.status(404).json({ error: "Book not found" });
     });
 
     // ToDo: Fix This!
-    app.delete('/wishlist/:email/book/:bookId', async (req, res) => {
+    app.delete("/wishlist/:email/book/:bookId", async (req, res) => {
       const userEmail = req.params.email;
       const bookId = req.params.bookId;
-      console.log(bookId)
+      console.log(bookId);
       const result = await wishlistCollection.findOneAndUpdate(
         { userEmail },
         { $pull: { books: { _id: ObjectId(bookId) } } }
@@ -163,26 +169,30 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
-
+      res.status(404).json({ error: "Book not found" });
     });
 
-    app.post('/readinglist', async (req, res) => {
+    app.post("/readinglist", async (req, res) => {
       const { userEmail, book } = req.body;
-      const bookData = { ...book, completedReading: false }
-      const payload = { userEmail, readingPlan: [bookData] }
+      const bookData = { ...book, completedReading: false };
+      const payload = { userEmail, readingPlan: [bookData] };
 
-      let result
-      const exist = await readlistCollection.findOne({ userEmail })
+      let result;
+      const exist = await readlistCollection.findOne({ userEmail });
       if (exist)
-        result = await readlistCollection.findOneAndUpdate({ userEmail }, { $push: { readingPlan: bookData } })
-      else
-        result = await readlistCollection.insertOne(payload);
+        result = await readlistCollection.findOneAndUpdate(
+          { userEmail },
+          { $push: { readingPlan: bookData } }
+        );
+      else result = await readlistCollection.insertOne(payload);
 
-      res.json({ message: 'Book added to Reading List successfully', result: result.value });
+      res.json({
+        message: "Book added to Reading List successfully",
+        result: result.value,
+      });
     });
 
-    app.get('/readinglist/:email', async (req, res) => {
+    app.get("/readinglist/:email", async (req, res) => {
       const userEmail = req.params.email;
       const result = await readlistCollection.findOne({ userEmail });
 
@@ -190,11 +200,10 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
-
+      res.status(404).json({ error: "Book not found" });
     });
 
-    app.patch('/readinglist/:email/book/:bookId', async (req, res) => {
+    app.patch("/readinglist/:email/book/:bookId", async (req, res) => {
       const userEmail = req.params.email;
       const bookId = req.params.bookId;
 
@@ -207,11 +216,10 @@ const run = async () => {
         return res.json(result);
       }
 
-      res.status(404).json({ error: 'Book not found' });
-
+      res.status(404).json({ error: "Book not found" });
     });
 
-    app.post('/user', async (req, res) => {
+    app.post("/user", async (req, res) => {
       const user = req.body;
 
       const result = await userCollection.insertOne(user);
@@ -219,7 +227,7 @@ const run = async () => {
       res.send(result);
     });
 
-    app.get('/user/:email', async (req, res) => {
+    app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
 
       const result = await userCollection.findOne({ email });
@@ -236,8 +244,8 @@ const run = async () => {
 
 run().catch((err) => console.log(err));
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+app.get("/", (req, res) => {
+  res.send("Hello World!");
 });
 
 app.listen(port, () => {
